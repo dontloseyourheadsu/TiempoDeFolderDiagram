@@ -1,0 +1,201 @@
+﻿@page "/"
+
+<PageTitle>Folder Structure</PageTitle>
+
+<h3>Folder Structure Generator</h3>
+
+<div class="mb-3">
+    <textarea class="form-control" placeholder="Edit me to generate tree diagram!" @bind="@InputText" style="height:150px;"></textarea>
+    <button class="btn btn-primary mt-2" @onclick="GenerateTree">Generate</button>
+</div>
+
+<div style="background: black; padding: 4em;">
+    @RenderNode(_rootNode)
+</div>
+
+<div class="mt-3">
+    @if (_errors.Count > 0)
+    {
+        <h4>Errors</h4>
+        <ul>
+            @foreach (var error in _errors)
+            {
+                <li class="alert-danger">@error</li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private string? InputText { get; set; }
+    private List<LineItem> ParsedLines { get; }
+    private FileSystemNode _rootNode;
+    private readonly List<string> _errors;
+
+    public Home()
+    {
+        _rootNode = CreateNewRootNode();
+        ParsedLines = new List<LineItem>();
+        _errors = new List<string>();
+    }
+
+    private FileSystemNode CreateNewRootNode()
+    {
+        return new FileSystemNode
+        {
+            DepthLevel = 0,
+            Text = string.Empty,
+            NodeType = FileSystemNodeType.Folder,
+            Icon = GetIcon(Icon.Folder)
+        };
+    }
+
+    private void GenerateTree()
+    {
+        _rootNode = CreateNewRootNode();
+        ParsedLines.Clear();
+        _errors.Clear();
+        var lines = GetLines();
+
+        var currentDepthNode = _rootNode;
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.TrimStart();
+            var isComment = IsComment(trimmedLine);
+            var isFile = IsFile(trimmedLine, isComment);
+
+            var indentation = GetDepthLevel(trimmedLine, isComment);
+            if (indentation > currentDepthNode.DepthLevel + 1)
+            {
+                _errors.Add($"Indentation level {indentation} is greater than the expected level {currentDepthNode.DepthLevel + 1} for {trimmedLine}");
+                continue;
+            }
+
+            var text = GetText(trimmedLine, isComment);
+            var iconType = isFile ? Icon.File : Icon.Folder;
+            var icon = GetIcon(iconType);
+            var nodeType = isComment ? FileSystemNodeType.Comment
+                : isFile ? FileSystemNodeType.File : FileSystemNodeType.Folder;
+
+            var childNode = new FileSystemNode
+            {
+                DepthLevel = indentation,
+                Text = text,
+                NodeType = nodeType,
+                Icon = icon
+            };
+
+            var addedChildNode = currentDepthNode.AddChildNode(childNode);
+
+            if (addedChildNode)
+            {
+                if (childNode.NodeType == FileSystemNodeType.Folder)
+                {
+                    currentDepthNode = childNode;
+                }
+            }
+            else
+            {
+                _errors.Add($"Error adding {childNode.Text} to {_rootNode.Text}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Represents a line item in the tree diagram
+    /// </summary>
+    private string[] GetLines() =>
+        InputText?.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+
+    /// <summary>
+    /// Is a comment line when it starts with "//"
+    /// </summary>
+    /// <param name="line">Line to check</param>
+    /// <returns>True if it is a comment line</returns>
+    private bool IsComment(string line) =>
+        line.TrimStart().StartsWith("//");
+
+    /// <summary>
+    /// Is a file line when it is not a comment and contains a dot representing a file extension.
+    /// Since files can be inside comments, we need to check if it is a comment line.
+    /// </summary>
+    /// <param name="line">Line to check</param>
+    /// <param name="isComment">Is a comment line</param>
+    /// <returns>True if it is a file line</returns>
+    private bool IsFile(string line, bool isComment = false) =>
+        !isComment && line.Contains(".");
+
+    /// <summary>
+    /// Get the depth level of the line.
+    /// Comments are always at depth 0 since they are not part of the folder structure.
+    /// </summary>
+    /// <param name="line">Line to check</param>
+    /// <param name="isComment">Is a comment line</param>
+    /// <returns>Depth level of the line</returns>
+    private int GetDepthLevel(string line, bool isComment = false) =>
+        isComment ? 0 : line.TakeWhile(c => c == '-').Count();
+
+    /// <summary>
+    /// Get the text of the line.
+    /// Comments start with "//" and files are not indented.
+    /// </summary>
+    /// <param name="line">Line to get text from</param>
+    /// <param name="isComment">Is a comment line</param>
+    /// <returns>Text of the line</returns>
+    private string GetText(string line, bool isComment = false) =>
+        isComment ? line.Substring(2).TrimStart() : line.TrimStart('-').TrimStart();
+
+    /// <summary>
+    /// Get the icon based on the type of the line.
+    /// </summary>
+    /// <param name="icon">Is the icon expected</param>
+    /// <returns>Icon name</returns>
+    private string GetIcon(Icon icon)
+    {
+        return icon switch
+        {
+            Icon.File => "insert_drive_file",
+            Icon.Folder => "folder",
+            _ => throw new ArgumentOutOfRangeException(nameof(icon), icon, null)
+        };
+    }
+
+    RenderFragment RenderNode(FileSystemNode node) => builder =>
+    {
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "style", $"margin-left:{node.DepthLevel * 20}px;");
+
+        if (node.NodeType == FileSystemNodeType.Comment)
+        {
+            builder.OpenElement(2, "span");
+            builder.AddAttribute(3, "style", "color:grey;");
+            builder.AddContent(4, $"// {node.Text}");
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(5, "i");
+            builder.AddAttribute(6, "class", "material-icons");
+            var color = string.IsNullOrWhiteSpace(node.Text) ? "gray" 
+                : node is { DepthLevel: >= 1, NodeType: FileSystemNodeType.Folder } 
+                    ? "lightblue" : "white";
+            builder.AddAttribute(7, "style", $"color: {color};");
+            builder.AddContent(8, node.Icon);
+            builder.CloseElement();
+
+            builder.OpenElement(9, "span");
+            builder.AddAttribute(10, "style", "color:white;");
+            builder.AddContent(11, node.Text);
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+
+        if (!node.Children.Any()) return;
+        foreach (var childFragment in node.Children.Select(RenderNode))
+        {
+            childFragment(builder);
+        }
+    };
+
+}
