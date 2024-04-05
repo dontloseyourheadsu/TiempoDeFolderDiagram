@@ -160,8 +160,32 @@
         };
     }
 
-    RenderFragment RenderNode(FileSystemNode node) => builder =>
+    RenderFragment RenderNode(FileSystemNode node) => __builder =>
     {
+        <div>
+            <div style="margin-left:@(node.DepthLevel * 20)px;">
+                @if (node.NodeType == FileSystemNodeType.Comment)
+                {
+                    <span style="color:grey;">// @node.Text</span>
+                }
+                else
+                {
+                    <i class="material-icons" style="color:@(string.IsNullOrWhiteSpace(node.Text) ? "gray" : node is { DepthLevel: >= 1, NodeType: FileSystemNodeType.Folder } ? "lightblue" : "white");">@node.Icon</i>
+                    <span style="color:white;">@node.Text</span>
+                    @if (node.NodeType == FileSystemNodeType.Folder)
+                    {
+                        <i class="material-icons" @onclick="node.ToggleCollapsed" style="color:white; cursor: pointer;">@(node.Collapsed ? "arrow_drop_up" : "arrow_drop_down")</i>
+                    }
+                }
+            </div>
+            @if (node.Children.Any() && !node.Collapsed)
+            {
+                foreach (var childFragment in node.Children.Select(RenderNode))
+                {
+                    childFragment(__builder);
+                }
+            }
+        </div>;/*
         builder.OpenElement(0, "div");
         builder.AddAttribute(1, "style", $"margin-left:{node.DepthLevel * 20}px;");
 
@@ -187,15 +211,25 @@
             builder.AddAttribute(10, "style", "color:white;");
             builder.AddContent(11, node.Text);
             builder.CloseElement();
+            
+            if (node.NodeType == FileSystemNodeType.Folder)
+            {
+                builder.OpenElement(12, "i");
+                builder.AddAttribute(13, "class", "material-icons");
+                builder.AddAttribute(14, "style", "color:white;");
+                builder.AddContent(15, node.Collapsed ? "arrow_drop_up" : "arrow_drop_down");
+                builder.CloseElement();
+            }
         }
 
         builder.CloseElement();
 
         if (!node.Children.Any()) return;
+        if (node.Collapsed) return;
         foreach (var childFragment in node.Children.Select(RenderNode))
         {
             childFragment(builder);
-        }
+        }*/
     };
 
 }

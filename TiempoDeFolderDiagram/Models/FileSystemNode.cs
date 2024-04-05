@@ -8,6 +8,7 @@ public class FileSystemNode
     public required string Icon { get; set; }
     public FileSystemNode? Parent { get; set; }
     public List<FileSystemNode> Children { get; } = [];
+    public bool Collapsed { get; set; } = false;
 
     public bool AddChildNode(FileSystemNode child)
     {
@@ -19,5 +20,10 @@ public class FileSystemNode
         Children.Add(child);
         child.Parent = this;
         return true;
+    }
+
+    public void ToggleCollapsed()
+    {
+        Collapsed = !Collapsed;
     }
 }
