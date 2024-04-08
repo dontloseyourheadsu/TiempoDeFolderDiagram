@@ -1,16 +1,12 @@
 ﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
-        <NavMenu/>
-    </div>
-
-    <main>
-        <div class="top-row px-4 auth">
+<div class="h-100 w-100 overflow-hidden">
+    <main class="h-100 w-100 d-flex flex-column overflow-hidden">
+        <div class="d-flex align-items-center justify-content-between px-4 bg-black">
+            <h1 class="m-0 text-white">Tiempo de Folder Structure</h1>
             <LoginDisplay/>
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
-        <article class="content px-4">
+        <article class="d-flex flex-column flex-grow-1 overflow-hidden">
             @Body
         </article>
     </main>
